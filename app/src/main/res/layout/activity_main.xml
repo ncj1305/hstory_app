@@ -21,10 +21,12 @@
 
     <LinearLayout
         android:id="@+id/contents"
-        android:layout_width="368dp"
-        android:layout_height="405dp"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
         android:orientation="vertical"
-        app:layout_constraintTop_toBottomOf="@+id/textView2"
-        tools:layout_editor_absoluteX="8dp"></LinearLayout>
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/textView2"></LinearLayout>
 
 </android.support.constraint.ConstraintLayout>
