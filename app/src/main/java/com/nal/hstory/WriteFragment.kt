@@ -1,77 +1,88 @@
 package com.nal.hstory
 
-import android.content.Context
+import android.app.AlertDialog
 import android.os.Bundle
 import android.support.v4.app.Fragment
 import android.support.v4.app.FragmentTransaction
 import android.util.Log
 import android.view.*
-import android.widget.ListView
+import android.widget.EditText
+import android.widget.Toast
+import com.android.volley.NetworkResponse
 import com.android.volley.Request
 import com.android.volley.Response
+import com.android.volley.toolbox.HttpHeaderParser
 import com.android.volley.toolbox.HurlStack
 import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
 import org.json.JSONObject
-import java.io.BufferedInputStream
-import java.io.FileInputStream
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
-import java.nio.file.Files
 import java.security.KeyStore
 import java.security.cert.CertificateFactory
 
 import java.security.cert.X509Certificate
 import javax.net.ssl.*
-import javax.security.cert.Certificate
 import javax.security.cert.CertificateException
 
 
-class DashboardFragment: Fragment() {
+class WriteFragment: Fragment() {
     var fragmentTransaction: FragmentTransaction? = null
-    var lvListView:ListView? = null
-    var cardList = ArrayList<CardData>()
-    var writeFragment = WriteFragment()
+    var etName: EditText? = null
+    var etTitle: EditText? = null
+    var etContent: EditText? = null
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         setHasOptionsMenu(true)
         fragmentTransaction = fragmentManager.beginTransaction()
-        return inflater.inflate(R.layout.fragment_dashboard, container, false)
-    }
-
-    override fun onCreateOptionsMenu(menu: Menu?, inflater: MenuInflater?) {
-        menu?.clear()
-        inflater?.inflate(R.menu.actions, menu)
-        super.onCreateOptionsMenu(menu, inflater)
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem?): Boolean {
-        when (item?.itemId) {
-            R.id.write -> {
-                fragmentTransaction
-                        ?.replace(R.id.contents, writeFragment)
-                        ?.addToBackStack("Write")
-                        ?.commit()
-                return true
-            }
-            else -> return super.onOptionsItemSelected(item)
-        }
+        return inflater.inflate(R.layout.fragment_write, container, false)
     }
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
-        lvListView = view?.findViewById<ListView?>(R.id.lvCardList)
-
-        processVolley()
+        etName = view?.findViewById<EditText?>(R.id.et_name)
+        etTitle = view?.findViewById<EditText?>(R.id.et_title)
+        etContent = view?.findViewById<EditText?>(R.id.et_content)
     }
 
-    override fun onResume() {
-        super.onResume()
-        cardList.clear()
+    override fun onCreateOptionsMenu(menu: Menu?, inflater: MenuInflater?) {
+        menu?.clear()
+        inflater?.inflate(R.menu.write_actions, menu)
     }
 
-    private fun processVolley() {
+    override fun onOptionsItemSelected(item: MenuItem?): Boolean {
+        when (item?.itemId) {
+            R.id.cancel -> {
+                clearForm()
+            }
+            R.id.upload -> {
+                if (isFormVailid()) {
+                    processUploadVolley()
+                }
+            }
+            else -> return super.onOptionsItemSelected(item)
+        }
+        return true
+    }
+
+    private fun clearForm() {
+        etName?.text?.clear()
+        etTitle?.text?.clear()
+        etContent?.text?.clear()
+    }
+
+    private fun isFormVailid(): Boolean {
+        if (!etName?.text.toString().equals("") &&
+            !etTitle?.text.toString().equals("") &&
+            !etContent?.text.toString().equals("")) {
+            return true
+        }
+        Toast.makeText(context,"Please fill out all section!",Toast.LENGTH_SHORT).show()
+        return false
+    }
+
+    private fun processUploadVolley() {
         val hurlStack = object : HurlStack() {
             @Throws(IOException::class)
             override fun createConnection(url: URL): HttpURLConnection {
@@ -86,31 +97,55 @@ class DashboardFragment: Fragment() {
                 return httpsURLConnection
             }
         }
-        val queue = Volley.newRequestQueue(this.context, hurlStack)
+        val queue = Volley.newRequestQueue(context, hurlStack)
 
-        val url = "https://ec2-54-180-90-166.ap-northeast-2.compute.amazonaws.com:8081/reviews/all"
+        val url = "https://ec2-54-180-90-166.ap-northeast-2.compute.amazonaws.com:8081/post"
+
+        val jsonBody = JSONObject()
+        jsonBody.put("name", etName?.text.toString());
+        jsonBody.put("title", etTitle?.text.toString());
+        jsonBody.put("content", etContent?.text.toString());
+        val requestBody = jsonBody.toString()
 
         Log.d("test", "start request")
-        val stringRequest = StringRequest(Request.Method.GET, url,
-                Response.Listener<String> { response ->
-                    // Display the first 500 characters of the response string.
-                    Log.d("test", "get response")
-                    Log.d("test", "Response is: $response")
-                    val resData = JSONObject(response)
-                    val reviewsArray = resData.getJSONArray("reviews")
-                    for (index in 0 until reviewsArray.length()) {
-                        val reviewData = reviewsArray.getJSONObject(index)
-                        cardList.add(CardData(
-                                reviewData.getString("name"),
-                                reviewData.getString("title"),
-                                reviewData.getString("content")
-                        ))
-                    }
-                    lvListView?.adapter = DashboardCardAdapter(this.context, cardList)
-                },
-                Response.ErrorListener { err ->
-                    Log.d("error", err.toString())
-                })
+        val stringRequest = object: StringRequest(Request.Method.POST, url,
+            Response.Listener<String> { response ->
+                // Display the first 500 characters of the response string.
+                Log.d("test", "get response")
+                Log.d("test", "Response is: $response")
+
+                var builder = AlertDialog.Builder(context)
+                builder.setTitle("Success")
+                builder.setMessage("Your message is uploaded");
+                builder.setPositiveButton("Confirm"){dialog, which ->
+                    clearForm()
+                    // Do something when user press the positive button
+                    Toast.makeText(context,"Good!",Toast.LENGTH_SHORT).show()
+                }
+                builder.show()
+            },
+            Response.ErrorListener { err ->
+                Log.d("error", err.toString())
+            })
+        {
+            override fun getBodyContentType(): String {
+                return "application/json; charset=utf-8"
+            }
+
+            override fun getBody(): ByteArray {
+                return requestBody.toByteArray(charset("utf-8"))
+            }
+
+            override fun parseNetworkResponse(response: NetworkResponse?): Response<String> {
+                var responseString = "";
+                if (response != null) {
+                    responseString = response.statusCode.toString();
+                    // can get more details such as response.h
+                }
+                return Response.success(responseString, HttpHeaderParser.parseCacheHeaders(response));
+            }
+
+        }
         queue.add(stringRequest)
     }
 
@@ -122,7 +157,7 @@ class DashboardFragment: Fragment() {
     private fun newSslSocketFactory(): SSLSocketFactory {
         try {
             val cf = CertificateFactory.getInstance("X.509")
-            val caInput = context.resources.openRawResource(R.raw.cert)
+            val caInput = context.applicationContext.resources.openRawResource(R.raw.cert)
             val ca = cf.generateCertificate(caInput)
             caInput.close()
 
