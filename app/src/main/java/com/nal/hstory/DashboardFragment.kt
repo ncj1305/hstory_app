@@ -88,7 +88,7 @@ class DashboardFragment: Fragment() {
         }
         val queue = Volley.newRequestQueue(this.context, hurlStack)
 
-        val url = "https://ec2-54-180-90-166.ap-northeast-2.compute.amazonaws.com:8081/reviews/all"
+        val url = "https://ec2-13-124-204-77.ap-northeast-2.compute.amazonaws.com:8081/reviews/all"
 
         Log.d("test", "start request")
         val stringRequest = StringRequest(Request.Method.GET, url,

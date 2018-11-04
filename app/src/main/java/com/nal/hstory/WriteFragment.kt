@@ -99,7 +99,7 @@ class WriteFragment: Fragment() {
         }
         val queue = Volley.newRequestQueue(context, hurlStack)
 
-        val url = "https://ec2-54-180-90-166.ap-northeast-2.compute.amazonaws.com:8081/post"
+        val url = "https://ec2-13-124-204-77.ap-northeast-2.compute.amazonaws.com:8081/post"
 
         val jsonBody = JSONObject()
         jsonBody.put("name", etName?.text.toString());
